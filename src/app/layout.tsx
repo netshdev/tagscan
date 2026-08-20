@@ -3,6 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppResetProvider } from "@/components/AppReset";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import {
+  SITE_DESCRIPTION,
+  SITE_LOCALE,
+  SITE_NAME,
+  SITE_TITLE,
+  siteUrl,
+} from "@/lib/site";
 import { THEME_BG, THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -19,49 +26,89 @@ const geistMono = Geist_Mono({
 });
 
 /**
- * Absolute base for every generated URL in metadata - notably the per-report
- * `og:image`.
+ * `metadataBase` makes every relative URL below absolute - notably `og:image`,
+ * which a crawler on someone else's infrastructure has to be able to fetch.
  *
  * Without it Next derives the origin from the incoming request, which silently
  * produces the wrong scheme or host behind a proxy that doesn't forward
- * `x-forwarded-*`. Since the whole point of a share link is that a crawler on
- * someone else's infrastructure can fetch that image, it's worth pinning.
- * Falling through to `undefined` keeps the request-derived behaviour in local dev.
+ * `x-forwarded-*`.
+ *
+ * `openGraph.images` and `twitter.images` are deliberately absent: the
+ * `opengraph-image` and `twitter-image` routes populate them, and declaring an
+ * image here as well would emit `og:image` twice. A duplicate tag isn't just
+ * untidy - crawlers take the first value, so the two could silently disagree.
  */
-function resolveMetadataBase(): URL | undefined {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-  if (explicit) return new URL(explicit);
-
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (vercel) return new URL(`https://${vercel}`);
-
-  return undefined;
-}
-
 export const metadata: Metadata = {
-  metadataBase: resolveMetadataBase(),
+  metadataBase: siteUrl(),
   title: {
-    default: "TagScan - Preview, Edit & Audit Your Meta Tags",
-    template: "%s · TagScan",
+    default: SITE_TITLE,
+    template: `%s · ${SITE_NAME}`,
   },
-  description:
-    "Paste a URL to see its real Google, X, Facebook, LinkedIn, Slack, Discord, WhatsApp, Telegram, Mastodon, Bluesky, and Pinterest cards. Edit any tag live, audit what's broken, and copy the code for your framework.",
-  applicationName: "TagScan",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  // Consolidates ranking signals if the site is ever reachable on more than one
+  // host, and stops `?url=`/`?view=` scans being indexed as separate pages.
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    siteName: "TagScan",
-    title: "TagScan - Preview, Edit & Audit Your Meta Tags",
-    description:
-      "See exactly how your link looks everywhere you share it, then fix it in place.",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: SITE_LOCALE,
   },
   twitter: {
     card: "summary_large_image",
-    title: "TagScan - Preview, Edit & Audit Your Meta Tags",
-    description:
-      "See exactly how your link looks everywhere you share it, then fix it in place.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
-  robots: { index: true, follow: true },
+  robots: {
+    index: true,
+    follow: true,
+    // Lets Google show a full-size thumbnail and an untruncated snippet rather
+    // than its conservative defaults.
+    "max-image-preview": "large",
+    "max-snippet": -1,
+  },
 };
+
+/**
+ * Structured data for the site and the tool it offers.
+ *
+ * A `@graph` keeps this to a single script tag with both nodes cross-referenced by
+ * `@id`, which is what crawlers prefer over two disconnected blocks - and means
+ * only one thing has to parse for the page to have valid structured data at all.
+ *
+ * `offers` at zero price is here because `SoftwareApplication` without it reads as
+ * "price unknown" in Search Console rather than "free".
+ */
+function structuredData(): string {
+  const base = siteUrl().toString().replace(/\/$/, "");
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${base}/#website`,
+        url: `${base}/`,
+        name: SITE_NAME,
+        description: SITE_DESCRIPTION,
+        inLanguage: "en",
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${base}/#app`,
+        name: SITE_NAME,
+        url: `${base}/`,
+        applicationCategory: "DeveloperApplication",
+        operatingSystem: "Any",
+        description: SITE_DESCRIPTION,
+        isPartOf: { "@id": `${base}/#website` },
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      },
+    ],
+  });
+}
 
 // themeColor belongs on the viewport export, not metadata - it's been deprecated
 // there since Next 14. Both entries are declared so the browser chrome matches
@@ -88,6 +135,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Blocking and inline: resolving the theme after paint would flash. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/*
+          Server-rendered rather than injected, so the crawlers that read it - none
+          of which run JavaScript - actually see it. `JSON.stringify` output needs
+          no further escaping here: every value is a constant we control, so there
+          is no untrusted input that could close the script tag.
+        */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: structuredData() }}
+        />
       </head>
       <body className="flex min-h-full flex-col font-sans antialiased">
         <a

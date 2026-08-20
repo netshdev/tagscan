@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Local screenshot output from scripts/shot.mjs
 shots/
+.verify/

@@ -1,0 +1,8 @@
+<!-- Mirrors markSvg() in src/lib/brand.ts - a static asset can't call it. Keep in step. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#3d5ee5"/>
+  <g fill="none" stroke="#fcfcfc" stroke-width="3.2" stroke-linecap="round">
+    <circle cx="13.8" cy="13.8" r="7.6"/>
+    <path d="M19.2 19.2 L25 25"/>
+  </g>
+</svg>

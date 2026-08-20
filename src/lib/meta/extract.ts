@@ -90,6 +90,17 @@ export function extractMeta(html: string, finalUrl: string): RawExtract {
   const meta: Record<string, string> = {};
   const duplicateMeta: Record<string, number> = {};
 
+  /**
+   * Tracks `key` plus any `media` attribute, which is what makes a repeat a real
+   * duplicate rather than a legitimate variant.
+   *
+   * A light/dark pair of `<meta name="theme-color" media="...">` is the standard
+   * way to do it and appears on a great many well-built pages - counting that as a
+   * duplicated tag would be a false positive on all of them. Only tags competing
+   * for the *same* conditions are genuinely in conflict.
+   */
+  const seen = new Set<string>();
+
   for (const el of document.querySelectorAll("meta") as Iterable<Node>) {
     // `property` is Open Graph, `name` is nearly everything else, and
     // `http-equiv` carries things like content-language.
@@ -106,11 +117,18 @@ export function extractMeta(html: string, finalUrl: string): RawExtract {
     const content = (el.getAttribute("content") ?? "").trim();
     if (!content) continue;
 
-    if (key in meta) {
+    const media = (el.getAttribute("media") ?? "").trim().toLowerCase();
+    const variant = media ? `${key}@${media}` : key;
+
+    if (seen.has(variant)) {
       duplicateMeta[key] = (duplicateMeta[key] ?? 1) + 1;
       continue; // first value wins, mirroring crawler behaviour
     }
-    meta[key] = content;
+    seen.add(variant);
+
+    // The bag itself is still keyed by name alone: a consumer asking for
+    // `theme-color` wants the value that applies by default, which is the first.
+    if (!(key in meta)) meta[key] = content;
   }
 
   // A `<base href>` retargets every relative URL on the page. The browser applied
