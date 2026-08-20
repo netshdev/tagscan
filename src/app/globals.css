@@ -1,26 +1,558 @@
 @import "tailwindcss";
 
+/* Class-based dark mode so the toggle can override the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Semantic tokens.
+
+   Raw values live here as plain custom properties (not in `@theme`) so a single
+   `.dark` block can re-point every one of them. `@theme inline` below maps them
+   onto Tailwind utilities, so `bg-surface` / `text-muted` resolve per theme with
+   no `dark:` variant needed at the call site.
+
+   Chroma is deliberately tiny on the neutrals (0.002–0.014) - enough to keep
+   greys from looking dead, not enough to read as a tint.
+--------------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces, back to front */
+  --bg: oklch(99.2% 0.002 265);
+  --bg-subtle: oklch(97.6% 0.004 265);
+  --surface: oklch(100% 0 0);
+  --surface-hover: oklch(97.4% 0.004 265);
+  --surface-sunken: oklch(96.4% 0.005 265);
+  --surface-inverse: oklch(21% 0.014 265);
+  /* The selected item in a segmented control, sitting on --surface-sunken. Its
+     own token because the two themes need opposite treatments: light lifts to
+     pure white and leans on a shadow, dark has to go *lighter* than the track
+     since a shadow is invisible against it. */
+  --surface-selected: oklch(100% 0 0);
+
+  /* Lines */
+  --border: oklch(92.4% 0.005 265);
+  --border-strong: oklch(86% 0.008 265);
+  --border-inverse: oklch(30% 0.014 265);
+
+  /* Text, most to least prominent */
+  --text: oklch(21% 0.014 265);
+  --text-muted: oklch(49% 0.013 265);
+  --text-subtle: oklch(62% 0.012 265);
+  --text-inverse: oklch(98% 0.002 265);
+
+  /* One accent, used sparingly. Indigo reads as "tool", not "brand campaign". */
+  --accent: oklch(54% 0.208 268);
+  --accent-hover: oklch(48% 0.208 268);
+  --accent-active: oklch(43% 0.2 268);
+  --accent-subtle: oklch(96% 0.024 268);
+  --accent-subtle-hover: oklch(93.5% 0.038 268);
+  --accent-border: oklch(84% 0.078 268);
+  --accent-text: oklch(45% 0.19 268);
+  --on-accent: oklch(99% 0 0);
+
+  /* Status. `-subtle` is a fill, `-text` is legible on that fill. */
+  --success: oklch(58% 0.15 155);
+  --success-subtle: oklch(95.5% 0.04 155);
+  --success-border: oklch(84% 0.09 155);
+  --success-text: oklch(45% 0.13 155);
+
+  --warning: oklch(72% 0.16 75);
+  --warning-subtle: oklch(96.5% 0.05 85);
+  --warning-border: oklch(87% 0.1 80);
+  --warning-text: oklch(48% 0.12 65);
+
+  --danger: oklch(58% 0.21 25);
+  --danger-subtle: oklch(96% 0.03 25);
+  --danger-border: oklch(86% 0.08 25);
+  --danger-text: oklch(50% 0.19 25);
+
+  --info: oklch(60% 0.14 240);
+  --info-subtle: oklch(96% 0.03 240);
+  --info-border: oklch(85% 0.07 240);
+  --info-text: oklch(48% 0.13 240);
+
+  /* Audit grade ramp - distinct hues so A/B and D/F never read as the same. */
+  --grade-a: oklch(60% 0.16 155);
+  --grade-b: oklch(68% 0.16 125);
+  --grade-c: oklch(74% 0.16 85);
+  --grade-d: oklch(66% 0.18 45);
+  --grade-f: oklch(58% 0.21 25);
+
+  --focus: oklch(54% 0.208 268);
+
+  /* Light mode carries real elevation; dark mode swaps to borders (below). */
+  --shadow-xs: 0 1px 2px 0 oklch(21% 0.014 265 / 0.05);
+  --shadow-sm: 0 1px 3px 0 oklch(21% 0.014 265 / 0.07), 0 1px 2px -1px oklch(21% 0.014 265 / 0.05);
+  --shadow-md: 0 4px 12px -2px oklch(21% 0.014 265 / 0.08), 0 2px 4px -2px oklch(21% 0.014 265 / 0.05);
+  --shadow-lg: 0 12px 28px -6px oklch(21% 0.014 265 / 0.12), 0 4px 8px -4px oklch(21% 0.014 265 / 0.06);
+  --shadow-accent: 0 1px 2px 0 oklch(40% 0.2 268 / 0.24);
+}
+
+.dark {
+  --bg: oklch(16.5% 0.012 265);
+  --bg-subtle: oklch(19.5% 0.013 265);
+  --surface: oklch(21% 0.014 265);
+  --surface-hover: oklch(25% 0.015 265);
+  --surface-sunken: oklch(18.5% 0.013 265);
+  --surface-inverse: oklch(97% 0.003 265);
+  /* 30% against an 18.5% track: an 11.5-point lift, versus the 2.5 points
+     --surface gave. Selection has to be carried by lightness here. */
+  --surface-selected: oklch(30% 0.017 265);
+
+  --border: oklch(29% 0.014 265);
+  --border-strong: oklch(38% 0.016 265);
+  --border-inverse: oklch(88% 0.006 265);
+
+  --text: oklch(97% 0.003 265);
+  --text-muted: oklch(72% 0.014 265);
+  --text-subtle: oklch(58% 0.015 265);
+  --text-inverse: oklch(21% 0.014 265);
+
+  /* Lifted lightness + trimmed chroma: saturated indigo vibrates on dark. */
+  --accent: oklch(68% 0.17 268);
+  --accent-hover: oklch(74% 0.16 268);
+  --accent-active: oklch(78% 0.14 268);
+  --accent-subtle: oklch(27% 0.06 268);
+  --accent-subtle-hover: oklch(31% 0.075 268);
+  --accent-border: oklch(40% 0.11 268);
+  --accent-text: oklch(80% 0.13 268);
+  --on-accent: oklch(17% 0.02 268);
+
+  --success: oklch(72% 0.16 155);
+  --success-subtle: oklch(26% 0.05 155);
+  --success-border: oklch(38% 0.09 155);
+  --success-text: oklch(82% 0.14 155);
+
+  --warning: oklch(80% 0.15 80);
+  --warning-subtle: oklch(28% 0.05 75);
+  --warning-border: oklch(40% 0.09 75);
+  --warning-text: oklch(86% 0.14 85);
+
+  --danger: oklch(68% 0.19 25);
+  --danger-subtle: oklch(27% 0.06 25);
+  --danger-border: oklch(40% 0.11 25);
+  --danger-text: oklch(80% 0.14 25);
+
+  --info: oklch(72% 0.13 240);
+  --info-subtle: oklch(27% 0.05 240);
+  --info-border: oklch(39% 0.09 240);
+  --info-text: oklch(82% 0.11 240);
+
+  --grade-a: oklch(74% 0.15 155);
+  --grade-b: oklch(80% 0.16 125);
+  --grade-c: oklch(84% 0.15 90);
+  --grade-d: oklch(76% 0.16 50);
+  --grade-f: oklch(70% 0.18 25);
+
+  --focus: oklch(74% 0.15 268);
+
+  /* Elevation can't rely on shade against a dark bg - keep shadows for depth
+     cues only and let borders do the separating. */
+  --shadow-xs: 0 1px 2px 0 oklch(0% 0 0 / 0.3);
+  --shadow-sm: 0 1px 3px 0 oklch(0% 0 0 / 0.4);
+  --shadow-md: 0 4px 12px -2px oklch(0% 0 0 / 0.45);
+  --shadow-lg: 0 12px 28px -6px oklch(0% 0 0 / 0.55);
+  --shadow-accent: 0 1px 2px 0 oklch(0% 0 0 / 0.4);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-selected: var(--surface-selected);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-inverse: var(--border-inverse);
+
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+  --color-inverse: var(--text-inverse);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-subtle-hover: var(--accent-subtle-hover);
+  --color-accent-border: var(--accent-border);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-border: var(--success-border);
+  --color-success-text: var(--success-text);
+
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-border: var(--warning-border);
+  --color-warning-text: var(--warning-text);
+
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-danger-border: var(--danger-border);
+  --color-danger-text: var(--danger-text);
+
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-info-border: var(--info-border);
+  --color-info-text: var(--info-text);
+
+  --color-grade-a: var(--grade-a);
+  --color-grade-b: var(--grade-b);
+  --color-grade-c: var(--grade-c);
+  --color-grade-d: var(--grade-d);
+  --color-grade-f: var(--grade-f);
+
+  --color-focus: var(--focus);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* Shared easing so unrelated components still feel like one system. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ---------------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------------- */
+
+/* Tailwind v4 defaults `border-*` to currentColor; we want token borders. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
   }
 }
 
+html {
+  color-scheme: light;
+  /* Kills the 300ms tap delay without disabling pinch-zoom. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Anchored headings clear the sticky header instead of hiding under it. */
+:target {
+  scroll-margin-top: 5rem;
+}
+
+
+/* One focus treatment everywhere, keyboard-only. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Native controls need explicit colors or Windows dark mode paints them white. */
+select,
+option {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+::selection {
+  background-color: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+/* Numeric UI (counters, scores, byte sizes) must not jitter as digits change. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbars - thin and token-aware, but only where we opt in.
+--------------------------------------------------------------------------- */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 9999px;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion. Every animation is transform/opacity only so it stays on the
+   compositor, and all of it collapses under prefers-reduced-motion.
+--------------------------------------------------------------------------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale3d(0.96, 0.96, 1);
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.4s var(--ease-out-quint) both;
+}
+.animate-fade {
+  animation: fade 0.3s ease-out both;
+}
+.animate-pop {
+  animation: pop 0.24s var(--ease-out-quint) both;
+}
+
+/* Skeleton sweep. The parent clips; this element only ever transforms. */
+.animate-shimmer {
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  /* Reveal animations exist to draw the eye - with reduced motion the content
+     should simply be there. Spinners keep turning (slowly) because they carry
+     "still working" meaning that no static frame conveys. */
+  .animate-rise,
+  .animate-fade,
+  .animate-pop {
+    animation: fade 0.01s linear both;
+  }
+
+  .animate-shimmer {
+    animation: none;
+  }
+
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .motion-safe-spin {
+    animation: spin 1.6s linear infinite !important;
+    animation-duration: 1.6s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+.motion-safe-spin {
+  animation: spin 0.7s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   Print
+
+   Drives the browser's own Print / "Save as PDF", which is how a reader turns a
+   report into a PDF. It also travels inside the downloadable HTML file, since
+   that file inlines this stylesheet - so a saved report prints correctly too.
+--------------------------------------------------------------------------- */
+@media print {
+  /* Force the light palette. A dark PDF wastes ink and reads badly on paper, so
+     the theme choice is overridden rather than inherited.
+
+     Every token is restated, not just the obvious ones. Overriding only the text
+     colours left the dark `-subtle` fills in place, which rendered the warning
+     callout as dark-brown-on-dark-brown. If a token exists in :root it belongs
+     here too. */
+  :root,
+  .dark {
+    --bg: oklch(100% 0 0);
+    --bg-subtle: oklch(97.6% 0.004 265);
+    --surface: oklch(100% 0 0);
+    --surface-hover: oklch(100% 0 0);
+    --surface-sunken: oklch(96.4% 0.005 265);
+    --surface-selected: oklch(100% 0 0);
+    --surface-inverse: oklch(21% 0.014 265);
+
+    --border: oklch(90% 0.005 265);
+    --border-strong: oklch(82% 0.008 265);
+    --border-inverse: oklch(30% 0.014 265);
+
+    --text: oklch(18% 0.014 265);
+    --text-muted: oklch(44% 0.013 265);
+    --text-subtle: oklch(56% 0.012 265);
+    --text-inverse: oklch(98% 0.002 265);
+
+    --accent: oklch(48% 0.208 268);
+    --accent-hover: oklch(48% 0.208 268);
+    --accent-active: oklch(43% 0.2 268);
+    --accent-subtle: oklch(96% 0.024 268);
+    --accent-subtle-hover: oklch(96% 0.024 268);
+    --accent-border: oklch(84% 0.078 268);
+    --accent-text: oklch(42% 0.19 268);
+    --on-accent: oklch(99% 0 0);
+
+    --success: oklch(55% 0.15 155);
+    --success-subtle: oklch(95.5% 0.04 155);
+    --success-border: oklch(84% 0.09 155);
+    --success-text: oklch(40% 0.13 155);
+
+    --warning: oklch(68% 0.16 75);
+    --warning-subtle: oklch(96.5% 0.05 85);
+    --warning-border: oklch(87% 0.1 80);
+    --warning-text: oklch(42% 0.12 65);
+
+    --danger: oklch(54% 0.21 25);
+    --danger-subtle: oklch(96% 0.03 25);
+    --danger-border: oklch(86% 0.08 25);
+    --danger-text: oklch(44% 0.19 25);
+
+    --info: oklch(55% 0.14 240);
+    --info-subtle: oklch(96% 0.03 240);
+    --info-border: oklch(85% 0.07 240);
+    --info-text: oklch(42% 0.13 240);
+
+    /* Darkened relative to screen: the light-mode grade ramp is tuned for
+       contrast against a lit display, and washes out on paper. */
+    --grade-a: oklch(52% 0.16 155);
+    --grade-b: oklch(56% 0.16 125);
+    --grade-c: oklch(58% 0.14 85);
+    --grade-d: oklch(56% 0.18 45);
+    --grade-f: oklch(51% 0.21 25);
+
+    --focus: oklch(48% 0.208 268);
+
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-accent: none;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  /*
+   * Site chrome and anything interactive is noise on paper.
+   *
+   * The report now lives inside the app rather than on its own route, so this
+   * carries more weight than it used to: the nav, the result header, the tab
+   * strip, and the report's own toolbar are all marked `data-print="hide"`, and
+   * removing them is what leaves the document alone on the page.
+   */
+  body > header,
+  body > footer,
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Let the printer decide pagination rather than clipping to a viewport. */
+  html,
+  body {
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  /* The app's layout constraints only make sense on screen; on paper the document
+     should fill the page box the @page margins already define. */
+  #main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* Keep a finding and its details on one page where possible. */
+  .print-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Headings should not be stranded at the foot of a page. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Spell out link targets, since a reader of the paper copy can't click. */
+  .print-url::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: var(--text-subtle);
+    word-break: break-all;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 16mm 14mm 18mm;
 }
