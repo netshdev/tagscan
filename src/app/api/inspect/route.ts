@@ -1,13 +1,13 @@
 import { inspect } from "@/lib/inspect";
 
 // Route handlers are uncached by default in Next 16, and non-GET methods are
-// never cached, so no `dynamic` export is needed here. `runtime` defaults to
-// "nodejs", which Playwright requires.
-export const maxDuration = 60;
+// never cached, so no `dynamic` export is needed here. `runtime` stays "nodejs"
+// for the manual redirect handling and `TextDecoder`'s full encoding set.
+export const maxDuration = 30;
 
 /** Errors caused by the *target* site are the caller's problem, not a 5xx here. */
 const TARGET_ISSUE =
-  /valid|supported|private|local|enter a url|HTTP \d|resolve|refused|blocked|SSL|certificate|protocol|timed out|too long|never responded|Couldn't load/i;
+  /valid|supported|private|local|enter a url|HTTP \d|resolve|refused|blocked|SSL|certificate|protocol|timed out|too long|too large|too many|redirects|not an HTML page|never responded|Couldn't load/i;
 
 /**
  * Returns the inspection and keeps nothing.

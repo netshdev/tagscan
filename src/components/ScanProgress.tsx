@@ -15,13 +15,10 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
  * spinning until the result actually lands rather than sitting at a fake 100%.
  */
 const STAGES = [
-  { label: "Launching a headless browser", until: 2_500 },
-  { label: "Loading the page", until: 9_000 },
-  { label: "Reading the document head", until: 11_500 },
-  { label: "Measuring computed styles", until: 14_000 },
-  { label: "Running the accessibility audit", until: 26_000 },
-  { label: "Fetching the social image", until: 29_000 },
-  { label: "Scoring the results", until: Number.POSITIVE_INFINITY },
+  { label: "Fetching the page", until: 1_200 },
+  { label: "Reading the document head", until: 1_800 },
+  { label: "Fetching the social image", until: 4_000 },
+  { label: "Running the checks", until: Number.POSITIVE_INFINITY },
 ] as const;
 
 const TICK_MS = 250;

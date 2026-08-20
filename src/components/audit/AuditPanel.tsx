@@ -76,16 +76,11 @@ const LEVEL_STYLES: Record<CheckLevel, string> = {
 interface Props {
   checks: Check[];
   summary: AuditSummary;
-  /**
-   * True when only tag-level checks ran, because no crawl was available. The
-   * score is then computed from a subset and must not be presented as a full one.
-   */
-  partial?: boolean;
   /** Focuses the matching editor input. Absent when there is nothing to jump to. */
   onJumpToField?: (field: keyof MetaDraft) => void;
 }
 
-export function AuditPanel({ checks, summary, partial = false, onJumpToField }: Props) {
+export function AuditPanel({ checks, summary, onJumpToField }: Props) {
   const [filter, setFilter] = useState<Filter>("problems");
 
   const visible = useMemo(() => {
@@ -115,7 +110,6 @@ export function AuditPanel({ checks, summary, partial = false, onJumpToField }: 
       <CardHeader className="gap-4">
         <div className="flex min-w-0 items-center gap-2">
           <CardTitle>Audit</CardTitle>
-          {partial ? <Badge tone="warning">Partial</Badge> : null}
         </div>
         <div
           role="group"
@@ -142,20 +136,9 @@ export function AuditPanel({ checks, summary, partial = false, onJumpToField }: 
         </div>
       </CardHeader>
 
-      {/* An incomplete score is worse than no score if it isn't labelled. */}
-      {partial ? (
-        <p className="border-b border-warning-border bg-warning-subtle px-4 py-3 text-xs leading-relaxed text-warning-text">
-          <strong className="font-semibold">Tag-level checks only.</strong> This view came
-          from a shared link, so there is no crawl behind it. Document language, viewport,
-          heading structure, structured data, icons, and the social image fetch were not
-          checked - and the score reflects only what could be. Scan the URL for the full
-          audit.
-        </p>
-      ) : null}
-
       {/* Score summary */}
       <div className="flex flex-wrap items-center gap-6 border-b border-border px-4 py-5">
-        <ScoreRing score={summary.score} grade={summary.grade} label={partial ? "Partial" : "Meta"} />
+        <ScoreRing score={summary.score} grade={summary.grade} label="Meta" />
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <p className="text-sm text-muted">

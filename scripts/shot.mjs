@@ -52,7 +52,7 @@ for (const theme of ["light", "dark"]) {
     console.log(`${OUT}/10-preview-${platform}-${theme}.png`);
   }
 
-  for (const view of ["Audit", "Design", "Code", "Report"]) {
+  for (const view of ["Audit", "Code", "Report"]) {
     await page.getByRole("tab", { name: view }).click();
     await page.waitForTimeout(800);
     await page.screenshot({ path: `${OUT}/20-${view.toLowerCase()}-${theme}.png`, fullPage: true });

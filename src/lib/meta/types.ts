@@ -1,11 +1,9 @@
-import type { Report as DesignReport } from "../types";
-
 /* ---------------------------------------------------------------------------
    Raw extraction
 
-   The browser pass captures *everything* it finds rather than only the fields we
-   currently render - keeping `meta` as an untyped bag means new checks can be
-   added without another crawl, and the UI can list unrecognised tags instead of
+   The extraction pass captures *everything* it finds rather than only the fields
+   we currently render - keeping `meta` as an untyped bag means new checks can be
+   added without another fetch, and the UI can list unrecognised tags instead of
    silently dropping them.
 --------------------------------------------------------------------------- */
 
@@ -57,7 +55,7 @@ export interface RawExtract {
   jsonLd: RawJsonLd[];
   headings: RawHeading[];
   images: { total: number; missingAlt: number; decorative: number };
-  /** Serialized document size, used to flag pages with bloated head sections. */
+  /** Size of the served HTML, used to flag pages with bloated head sections. */
   htmlLength: number;
 }
 
@@ -183,10 +181,4 @@ export interface Inspection {
   probes: ImageProbe[];
   checks: Check[];
   summary: AuditSummary;
-  /**
-   * Design and accessibility scorecard from the same crawl. Optional because a
-   * stored inspection may predate it, or the axe pass may have failed while the
-   * meta extraction succeeded.
-   */
-  design?: DesignReport | null;
 }

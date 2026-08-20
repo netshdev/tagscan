@@ -1,8 +1,8 @@
 import { PLATFORM_ORDER, type PlatformId } from "./meta/platforms";
 
-export type View = "previews" | "audit" | "design" | "code" | "report";
+export type View = "previews" | "audit" | "code" | "report";
 
-const VIEWS: readonly View[] = ["previews", "audit", "design", "code", "report"];
+const VIEWS: readonly View[] = ["previews", "audit", "code", "report"];
 
 /**
  * Query-param parsers. Deliberately in a server-safe module: the page reads

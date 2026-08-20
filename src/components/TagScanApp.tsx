@@ -15,7 +15,6 @@ import type { Inspection, MetaDraft } from "@/lib/meta/types";
 import type { View } from "@/lib/views";
 import { useAppReset } from "@/components/AppReset";
 import { AuditPanel } from "@/components/audit/AuditPanel";
-import { DesignPanel } from "@/components/audit/DesignPanel";
 import { CodeExport } from "@/components/editor/CodeExport";
 import { MetaEditor } from "@/components/editor/MetaEditor";
 import { PreviewStage } from "@/components/previews/PreviewStage";
@@ -136,10 +135,29 @@ export function TagScanApp({ initialUrl, initialView, initialPlatform }: Props) 
         body: JSON.stringify({ url }),
         signal: controller.signal,
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error ?? "Inspection failed.");
+      /**
+       * Parsed defensively rather than with a bare `response.json()`.
+       *
+       * A crashed or timed-out function returns a status with an empty body, and
+       * parsing that first throws a SyntaxError that buries the status entirely -
+       * the user gets "Unexpected end of JSON input" instead of anything useful.
+       */
+      const body = await response.text();
+      let data: { error?: string } | null = null;
+      try {
+        data = body ? JSON.parse(body) : null;
+      } catch {
+        data = null;
+      }
 
-      const result = data as Inspection;
+      if (!response.ok) {
+        throw new Error(
+          data?.error ?? `The scan failed with HTTP ${response.status}. Please try again.`,
+        );
+      }
+      if (!data) throw new Error("The scan returned an empty response. Please try again.");
+
+      const result = data as unknown as Inspection;
       setInspection(result);
       setDraft(result.draft);
     } catch (err) {
@@ -244,7 +262,6 @@ export function TagScanApp({ initialUrl, initialView, initialPlatform }: Props) 
         label: "Audit",
         badge: problems > 0 ? <CountBadge count={problems} tone="danger" /> : undefined,
       },
-      { value: "design", label: "Design" },
       { value: "code", label: "Code" },
       { value: "report", label: "Report" },
     ];
@@ -350,8 +367,6 @@ export function TagScanApp({ initialUrl, initialView, initialPlatform }: Props) 
                 onJumpToField={jumpToField}
               />
             ) : null}
-
-            {view === "design" ? <DesignPanel report={inspection.design} /> : null}
 
             {view === "code" ? <CodeExport draft={deferredDraft} /> : null}
 

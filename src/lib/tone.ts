@@ -34,11 +34,3 @@ export const CHECK_LABEL: Record<CheckLevel, string> = {
   fail: "Fail",
   info: "Info",
 };
-
-/** Severity tone for the design/accessibility scorecard. */
-export const SEVERITY_TONE: Record<string, Tone> = {
-  critical: "danger",
-  serious: "danger",
-  moderate: "warning",
-  minor: "neutral",
-};

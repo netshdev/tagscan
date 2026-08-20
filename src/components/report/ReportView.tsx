@@ -29,7 +29,7 @@ export function ReportView({ inspection }: { inspection: Inspection }) {
     try {
       await downloadStandaloneHtml(
         node,
-        `${host} - Accessibility & Metadata Report`,
+        `${host} - Metadata Report`,
         safeFilename(host, inspection.fetchedAt, "html"),
       );
     } finally {
